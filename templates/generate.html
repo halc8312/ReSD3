@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}画像生成{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>画像生成</h1>
+    {% if credits is not none %}
+    <div class="credit-info">
+        <h2>残りクレジット: {{ credits }}</h2>
+    </div>
+    {% endif %}
+    <form method="post" id="generate-form" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="prompt">プロンプト:</label>
+            <textarea id="prompt" name="prompt" rows="3" placeholder="プロンプトをカンマで区切って入力してください" oninput="updateCharacterCount('prompt', 'prompt-char-count')"></textarea>
+            <span id="prompt-char-count" class="char-count">あと10000文字</span>
+            <p class="note">画像生成に望む内容を具体的に記述してください。詳細なプロンプトが良い結果をもたらします。</p>
+        </div>
+        <div class="form-group">
+            <label for="negative_prompt">ネガティブプロンプト:</label>
+            <textarea id="negative_prompt" name="negative_prompt" rows="3" placeholder="ネガティブプロンプトをカンマで区切って入力してください" oninput="updateCharacterCount('negative_prompt', 'negative-prompt-char-count')"></textarea>
+            <span id="negative-prompt-char-count" class="char-count">あと10000文字</span>
+            <p class="note">出力画像に含めたくない内容を記述してください。特定の要素を除外したい場合に使用します。</p>
+        </div>
+        <div class="form-group">
+            <label for="aspect_ratio">アスペクト比:</label>
+            <select id="aspect_ratio" name="aspect_ratio">
+                <option value="1:1">1:1</option>
+                <option value="16:9">16:9（横長）</option>
+                <option value="21:9">21:9（Ultraではエラーが出ます）</option>
+                <option value="2:3">2:3</option>
+                <option value="3:2">3:2</option>
+                <option value="4:5">4:5</option>
+                <option value="5:4">5:4</option>
+                <option value="9:16">9:16</option>
+                <option value="9:21">9:21（Ultraではエラーが出ます。）</option>
+            </select>
+            <p class="note">生成する画像のアスペクト比を選択してください。</p>
+        </div>
+        <div class="form-group">
+            <label for="style_preset">スタイルプリセット:</label>
+            <select id="style_preset" name="style_preset">
+                <option value="enhance">enhance</option>
+                <option value="anime">anime</option>
+                <option value="photographic">photographic</option>
+                <option value="digital-art">digital-art</option>
+                <option value="comic-book">comic-book</option>
+                <option value="fantasy-art">fantasy-art</option>
+                <option value="line-art">line-art</option>
+                <option value="analog-film">analog-film</option>
+                <option value="neon-punk">neon-punk</option>
+                <option value="isometric">isometric</option>
+                <option value="low-poly">low-poly</option>
+                <option value="origami">origami</option>
+                <option value="modeling-compound">modeling-compound</option>
+                <option value="cinematic">cinematic</option>
+                <option value="3d-model">3d-model</option>
+                <option value="pixel-art">pixel-art</option>
+                <option value="tile-texture">tile-texture</option>
+            </select>
+            <p class="note">生成画像のスタイルを選択してください。</p>
+        </div>
+        <div class="form-group">
+            <label for="model">モデル:</label>
+            <select id="model" name="model">
+                <option value="sd3">sd3（6.5クレジット/成功生成）</option>
+                <option value="sd3-turbo">sd3-turbo（動作しなくなった..）</option>
+                <option value="ultra">ultra（8クレジット/成功生成）</option>
+            </select>
+            <p class="note">使用するモデルを選択してください。Ultraモデルは8クレジットが必要です。</p>
+        </div>
+        <div class="form-group">
+            <label for="seed">シード（任意）:</label>
+            <input type="text" id="seed" name="seed" placeholder="任意のシード値を入力してください">
+            <p class="note">生成に使用する乱数シードを指定できます。指定しない場合はランダムになります。</p>
+        </div>
+        <div class="form-group">
+            <label for="image_to_image">画像をアップロード（任意）:</label>
+            <input type="file" id="image_to_image" name="image_to_image">
+            <p class="note">画像をアップロードすると、プロンプトに基づいて画像から画像を生成します。</p>
+        </div>
+        <button type="submit" class="generate-button">画像生成</button>
+        <p class="note">「画像生成」ボタンをクリックすると、選択したモデルと設定に基づいて画像が生成されます。成功した生成のみクレジットが消費されます。</p>
+    </form>
+</div>
+
+<script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fromPage = 'generate';  // ページの識別用変数
+
+    // ページロード時にプロンプトを復元
+    fetch(`/get_prompt?from_page=${fromPage}`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('prompt').value = data.prompt;
+            document.getElementById('negative_prompt').value = data.negative_prompt;
+        });
+
+    document.getElementById('generate-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const prompt = document.getElementById('prompt').value;
+        const negativePrompt = document.getElementById('negative_prompt').value;
+
+        fetch('/save_prompt', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                prompt: prompt,
+                negative_prompt: negativePrompt,
+                from_page: fromPage
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                event.target.submit(); // プロンプト保存後にフォームを送信
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

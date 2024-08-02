@@ -1,0 +1,5 @@
+Flask
+requests
+gunicorn==22.0.0
+Pillow
+Flask-Mail
